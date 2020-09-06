@@ -70,7 +70,7 @@ class ExcelFile(object):
         CoUninitialize()
 
 
-def export_img(fn_excel, fn_image, page=None, _range=None):
+def export_img(fn_excel, fn_image, page=None, _range=None, save_img=True):
     """ Exports images from excel file """
 
     output_ext = os.path.splitext(fn_image)[1].upper()
@@ -81,6 +81,8 @@ def export_img(fn_excel, fn_image, page=None, _range=None):
     if _range is not None and page is not None and '!' not in _range:
         _range = "'%s'!%s"%(page, _range)
 
+    im = None
+
     with ExcelFile.open(fn_excel) as excel:
         if _range is None:
             if page is None: page = 1
@@ -90,8 +92,9 @@ def export_img(fn_excel, fn_image, page=None, _range=None):
                 raise Exception("Failed locating used cell range on page %s"%page)
             except AttributeError:
                 # This might be a "chart page", try exporting it as a whole
-                rng = excel.workbook.Sheets(page).Export(os.path.abspath(fn_image))
-                return
+                if save_img:
+                    rng = excel.workbook.Sheets(page).Export(os.path.abspath(fn_image))
+                return im
             if str(rng) == "None":
                 # No used cells on a page. maybe there's a single object.. try simply exporting as png
                 shapes = excel.workbook.Sheets(page).Shapes
@@ -119,7 +122,9 @@ def export_img(fn_excel, fn_image, page=None, _range=None):
             try:
                 rng.CopyPicture(xlScreen, xlBitmap)
                 im = ImageGrab.grabclipboard()
-                im.save(fn_image, fn_image[-3:])
+                if save_img:
+                    im.save(fn_image, fn_image[-3:])
+                return im
                 success = True
             except (com_error, AttributeError) as e:
                 # http://stackoverflow.com/questions/24740062/copypicture-method-of-range-class-failed-sometimes
